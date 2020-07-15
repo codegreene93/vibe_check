@@ -11,8 +11,10 @@ var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
 var cors = require('cors');
 var querystring = require('querystring');
+var SpotifyWebApi = require('spotify-web-api-node');
 var cookieParser = require('cookie-parser');
-var routes = require("./routes");
+
+var spotifyApi = new SpotifyWebApi();
 require('dotenv').config({ path: '../.env'});
 
 var client_id = process.env.CLIENT_; // Your client id
@@ -49,14 +51,16 @@ app.get('/login', function(req, res) {
   res.cookie(stateKey, state);
 
   // your application requests authorization
-  var scope = 'user-read-private user-read-email';
+  var scope = 'user-read-private user-read-playback-state user-read-email playlist-modify-public playlist-read-private user-modify-playback-state';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
       client_id: client_id,
       scope: scope,
       redirect_uri: redirect_uri,
-      state: state
+      state: state,
+
+
     }));
 });
 
@@ -107,11 +111,11 @@ app.get('/callback', function(req, res) {
         });
 
         // we can also pass the token to the browser to make requests from there
-        res.redirect('/#' +
+        res.redirect('http://localhost:3000/#' +
           querystring.stringify({
             access_token: access_token,
             refresh_token: refresh_token
-          }));
+      }));
       } else {
         res.redirect('/#' +
           querystring.stringify({
@@ -137,14 +141,26 @@ app.get('/refresh_token', function(req, res) {
   };
 
   request.post(authOptions, function(error, response, body) {
+
     if (!error && response.statusCode === 200) {
       var access_token = body.access_token;
       res.send({
         'access_token': access_token
       });
     }
+    spotifyApi.getMyCurrentPlaybackState({
+  })
+  .then(function(data) {
+    // Output items
+    console.log("Now Playing: ",data.body);
+  }, function(err) {
+    console.log('Something went wrong!', err);
+  });
   });
 });
+
+
+
 
 console.log('Listening on 8888');
 app.listen(8888);
